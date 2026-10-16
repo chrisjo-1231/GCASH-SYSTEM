@@ -174,18 +174,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate optional fields.
-    if (
-      referenceNumber.length > 100 ||
-      notes.length > 500
-    ) {
-      return NextResponse.json(
-        {
-          message:
-            "Reference number must not exceed 100 characters and notes must not exceed 500 characters.",
-        },
-        { status: 400 }
-      );
+   
+    // Prevent duplicate non-empty reference numbers.
+    if (referenceNumber) {
+      const existingTransaction =
+        await prisma.gcashTransaction.findFirst({
+          where: {
+            referenceNumber,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+      if (existingTransaction) {
+        return NextResponse.json(
+          {
+            message:
+              "This reference number is already recorded. Please use a different reference number.",
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Calculate the service fee on the server.
